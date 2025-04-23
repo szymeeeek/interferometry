@@ -37,7 +37,7 @@ Double_t inter(Double_t *x, Double_t *p){
     return (A0 / 3.0) * envelope * std::sqrt(sqrt_term);
 }
 
-Bool_t interfero(string filename = "data.txt"){
+Bool_t interfero(string filename = "data_corrected.txt"){
     TFile *output = new TFile("z27.root", "UPDATE");
     if(output->IsZombie()){return kFALSE;}
 
@@ -65,7 +65,7 @@ Bool_t interfero(string filename = "data.txt"){
     TCanvas *c1 = new TCanvas();
     c1->cd();
     graph->SetMarkerStyle(8);
-    graph->SetMarkerSize(0.5);
+    graph->SetMarkerSize(1);
     graph->SetMarkerColor(kOcean);
     graph->SetTitle("; #frac{1}{I_{0}} #left[#frac{cm^{2}}{W}#right]; #frac{1}{I_{1}} #left[#frac{cm^{2}}{W}#right]");
     graph->Draw("AP");
@@ -79,24 +79,29 @@ Bool_t sim(){
     vector<Int_t> d = {10, 15, 20}; //cm
     Int_t G = 1.5e6; //Hz
 
-    vector<Double_t> A_plus = {1, 1.5, 2};
-    vector<Double_t> A_minus = {1, 1.2, 1.8};
-    Double_t A_0 = 1.15;
+    vector<Double_t> A_plus = {1, 1.2, 1.5};
+    vector<Double_t> A_minus = {0.8, 1., 1.3};
+    Double_t A_0 = 0.6;
 
-    vector<TF1*> funcs = {nullptr};
-    vector<TMultiGraph*> multi = {nullptr};
+    vector<TF1*> funcs;
+    vector<TMultiGraph*> multi;
+    vector<TLegend*> legends;
     
     
     for(int i = 0; i<3; i++){
-        TMultiGraph *mg = new TMultiGraph(Form("resonatorLength%i", d[i]), Form("resonatorLength%i", d[i]));
+        TMultiGraph *mg = new TMultiGraph(Form("resonatorLength%i", d[i]), Form("resonatorLength%i; #Delta x [cm]; V", d[i]));
+        TLegend *leg = new TLegend();
         for(int j = 0; j<3; j++){
-            TF1 *f = new TF1(Form("interFit_%i_%i", i, j), inter, 0, 70, 5);
+            TF1 *f = new TF1(Form("interFit_%i_%i", i, j), inter, -20, 70, 5);
             f->SetParameters(A_0, A_plus[j], A_minus[j], G, d[i]);
-            // funcs.at((i+1)*(j+1)) = f;
+            funcs.push_back(f);
 
             TGraph *gr = new TGraph(f);
+            gr->SetLineColor(92+j);
+            leg->AddEntry(gr, Form("A(+1) = %.2f; A(-1) = %.2f", A_plus[j], A_minus[j]));
             mg->Add(gr);
         }
+        legends.push_back(leg);
         multi.push_back(mg);
     }
 
@@ -109,11 +114,16 @@ Bool_t sim(){
     // f->SetParName(4, "d");         // długość rezonatora
 
     TCanvas *c1 = new TCanvas();
-    c1->Divide(3, 1);
+    c1->Divide(1, 3);
     for(int i = 0; i<3; i++){
-        c1->cd(i);
-        multi.at(i+1)->Draw();
-        multi.at(i+1)->Write();
+        c1->cd(i+1);
+        multi.at(i)->GetXaxis()->SetTitleSize(0.05);
+        multi.at(i)->GetYaxis()->SetTitleSize(0.06);
+        multi.at(i)->GetXaxis()->SetLabelSize(0.05);
+        multi.at(i)->GetYaxis()->SetLabelSize(0.06);
+        multi.at(i)->Draw("AL");
+        legends.at(i)->Draw();
+        multi.at(i)->Write();
     }
 
     c1->Write();
