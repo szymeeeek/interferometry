@@ -3,6 +3,7 @@
 #include <TMath.h>
 #include <string>
 #include <cmath>
+#include <TF1.h>
 
 using namespace std;
 
@@ -70,5 +71,52 @@ Bool_t interfero(string filename = "data.txt"){
     graph->Draw("AP");
     graph->Write();
 
+    return kTRUE;
+}
+
+Bool_t sim(){
+    TFile *out = new TFile("output.root", "RECREATE");
+    vector<Int_t> d = {10, 15, 20}; //cm
+    Int_t G = 1.5e6; //Hz
+
+    vector<Double_t> A_plus = {1, 1.5, 2};
+    vector<Double_t> A_minus = {1, 1.2, 1.8};
+    Double_t A_0 = 1.15;
+
+    vector<TF1*> funcs = {nullptr};
+    vector<TMultiGraph*> multi = {nullptr};
+    
+    
+    for(int i = 0; i<3; i++){
+        TMultiGraph *mg = new TMultiGraph(Form("resonatorLength%i", d[i]), Form("resonatorLength%i", d[i]));
+        for(int j = 0; j<3; j++){
+            TF1 *f = new TF1(Form("interFit_%i_%i", i, j), inter, 0, 70, 5);
+            f->SetParameters(A_0, A_plus[j], A_minus[j], G, d[i]);
+            // funcs.at((i+1)*(j+1)) = f;
+
+            TGraph *gr = new TGraph(f);
+            mg->Add(gr);
+        }
+        multi.push_back(mg);
+    }
+
+    cout<<funcs.size()<<endl;
+
+    // f->SetParName(0, "A0");        // amplituda głównego modu
+    // f->SetParName(1, "A_plus1");   // amplituda modu +1
+    // f->SetParName(2, "A_minus1");  // amplituda modu -1
+    // f->SetParName(3, "Gamma");     // szerokość spektralna
+    // f->SetParName(4, "d");         // długość rezonatora
+
+    TCanvas *c1 = new TCanvas();
+    c1->Divide(3, 1);
+    for(int i = 0; i<3; i++){
+        c1->cd(i);
+        multi.at(i+1)->Draw();
+        multi.at(i+1)->Write();
+    }
+
+    c1->Write();
+    
     return kTRUE;
 }
